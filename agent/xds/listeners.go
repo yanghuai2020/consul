@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/consul/logging"
 	"net"
 	"net/url"
 	"regexp"
@@ -28,6 +27,7 @@ import (
 	"github.com/hashicorp/consul/agent/connect"
 	"github.com/hashicorp/consul/agent/proxycfg"
 	"github.com/hashicorp/consul/agent/structs"
+	"github.com/hashicorp/consul/logging"
 )
 
 // listenersFromSnapshot returns the xDS API representation of the "listeners" in the snapshot.
@@ -73,7 +73,7 @@ func (s *Server) listenersFromSnapshotConnectProxy(cfgSnap *proxycfg.ConfigSnaps
 		if chain == nil || chain.IsDefault() {
 			upstreamListener, err = s.makeUpstreamListenerIgnoreDiscoveryChain(&u, chain, cfgSnap)
 		} else {
-			upstreamListener, err = s.makeUpstreamListenerForDiscoveryChain(&u, chain, cfgSnap)
+			upstreamListener, err = s.makeUpstreamListenerForDiscoveryChain(&u, chain)
 		}
 		if err != nil {
 			return nil, err
@@ -285,7 +285,7 @@ func (s *Server) listenersFromSnapshotIngressGateway(cfgSnap *proxycfg.ConfigSna
 			if chain == nil || chain.IsDefault() {
 				upstreamListener, err = s.makeUpstreamListenerIgnoreDiscoveryChain(&u, chain, cfgSnap)
 			} else {
-				upstreamListener, err = s.makeUpstreamListenerForDiscoveryChain(&u, chain, cfgSnap)
+				upstreamListener, err = s.makeUpstreamListenerForDiscoveryChain(&u, chain)
 			}
 			if err != nil {
 				return nil, err
@@ -306,11 +306,7 @@ func (s *Server) listenersFromSnapshotIngressGateway(cfgSnap *proxycfg.ConfigSna
 			}
 
 			listener.FilterChains = []envoylistener.FilterChain{
-				{
-					Filters: []envoylistener.Filter{
-						filter,
-					},
-				},
+				{Filters: []envoylistener.Filter{filter}},
 			}
 			resources = append(resources, listener)
 		}
@@ -779,7 +775,6 @@ func (s *Server) makeMeshGatewayListener(name, addr string, port int, cfgSnap *p
 func (s *Server) makeUpstreamListenerForDiscoveryChain(
 	u *structs.Upstream,
 	chain *structs.CompiledDiscoveryChain,
-	cfgSnap *proxycfg.ConfigSnapshot,
 ) (proto.Message, error) {
 	cfg, err := ParseUpstreamConfigNoDefaults(u.Config)
 	if err != nil {
