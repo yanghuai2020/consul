@@ -95,7 +95,7 @@ func (c *cmd) Run(args []string) int {
 		return 1
 	}
 
-	// TODO (mkeeler) should we output anything when successful
+	c.UI.Info(fmt.Sprintf("Config entry %q / %q updated successfully", entry.GetKind(), entry.GetName()))
 	return 0
 }
 
