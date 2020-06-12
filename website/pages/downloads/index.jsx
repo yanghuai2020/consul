@@ -3,14 +3,14 @@ import ProductDownloader from '@hashicorp/react-product-downloader'
 import Head from 'next/head'
 import HashiHead from '@hashicorp/react-head'
 
-export default function DownloadsPage({ downloadData }) {
+export default function DownloadsPage({ releaseData }) {
   return (
     <div id="p-downloads" className="g-container">
       <HashiHead is={Head} title="Downloads | Consul by HashiCorp" />
       <ProductDownloader
         product="Consul"
         version={VERSION}
-        downloads={downloadData}
+        releaseData={releaseData}
         prerelease={{
           type: 'beta', // the type of prerelease: beta, release candidate, etc.
           name: 'v1.8.0', // the name displayed in text on the website
@@ -48,16 +48,8 @@ export default function DownloadsPage({ downloadData }) {
 
 export async function getStaticProps() {
   return fetch(`https://releases.hashicorp.com/consul/${VERSION}/index.json`)
-    .then((r) => r.json())
-    .then((r) => {
-      // TODO: restructure product-downloader to run this logic internally
-      return r.builds.reduce((acc, build) => {
-        if (!acc[build.os]) acc[build.os] = {}
-        acc[build.os][build.arch] = build.url
-        return acc
-      }, {})
-    })
-    .then((r) => ({ props: { downloadData: r } }))
+    .then((res) => res.json())
+    .then((releaseData) => ({ props: { releaseData } }))
     .catch(() => {
       throw new Error(
         `--------------------------------------------------------
