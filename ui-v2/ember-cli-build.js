@@ -18,11 +18,11 @@ module.exports = function(defaults) {
       },
       'ember-cli-string-helpers': {
         only: [
-          'capitalize', 
-          'lowercase', 
-          'truncate', 
-          'uppercase', 
-          'humanize', 
+          'capitalize',
+          'lowercase',
+          'truncate',
+          'uppercase',
+          'humanize',
           'titleize'
         ],
       },
