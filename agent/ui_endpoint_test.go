@@ -593,6 +593,18 @@ func TestUIGatewayServiceNodes_Ingress(t *testing.T) {
 		}
 		require.NoError(t, a.RPC("Catalog.Register", &arg, &regOutput))
 
+		// Set web protocol to http
+		svcDefaultsReq := structs.ConfigEntryRequest{
+			Datacenter: "dc1",
+			Entry: &structs.ServiceConfigEntry{
+				Name:     "web",
+				Protocol: "http",
+			},
+		}
+		var configOutput bool
+		require.NoError(t, a.RPC("ConfigEntry.Apply", &svcDefaultsReq, &configOutput))
+		require.True(t, configOutput)
+
 		// Register ingress-gateway config entry, linking it to db and redis (does not exist)
 		args := &structs.IngressGatewayConfigEntry{
 			Name: "ingress-gateway",
@@ -609,10 +621,20 @@ func TestUIGatewayServiceNodes_Ingress(t *testing.T) {
 				},
 				{
 					Port:     8080,
-					Protocol: "tcp",
+					Protocol: "http",
 					Services: []structs.IngressService{
 						{
 							Name: "web",
+						},
+					},
+				},
+				{
+					Port:     8081,
+					Protocol: "http",
+					Services: []structs.IngressService{
+						{
+							Name:  "web",
+							Hosts: []string{"*.test.example.com"},
 						},
 					},
 				},
@@ -624,7 +646,6 @@ func TestUIGatewayServiceNodes_Ingress(t *testing.T) {
 			Datacenter: "dc1",
 			Entry:      args,
 		}
-		var configOutput bool
 		require.NoError(t, a.RPC("ConfigEntry.Apply", &req, &configOutput))
 		require.True(t, configOutput)
 	}
@@ -636,11 +657,17 @@ func TestUIGatewayServiceNodes_Ingress(t *testing.T) {
 	assert.Nil(t, err)
 	assertIndex(t, resp)
 
+	// Construct expected addresses so that differences between OSS/Ent are handled by code
+	webDNS := serviceIngressDNSName("web", "dc1", "consul.", structs.DefaultEnterpriseMeta())
+	dbDNS := serviceIngressDNSName("db", "dc1", "consul.", structs.DefaultEnterpriseMeta())
+
 	dump := obj.([]*ServiceSummary)
 	expect := []*ServiceSummary{
 		{
-			Name:           "web",
-			GatewayConfig:  GatewayConfig{ListenerPort: 8080},
+			Name: "web",
+			GatewayConfig: GatewayConfig{
+				Addresses: []string{fmt.Sprintf("%s:8080", webDNS), "*.test.example.com:8081"},
+			},
 			EnterpriseMeta: *structs.DefaultEnterpriseMeta(),
 		},
 		{
@@ -651,9 +678,14 @@ func TestUIGatewayServiceNodes_Ingress(t *testing.T) {
 			ChecksPassing:  1,
 			ChecksWarning:  1,
 			ChecksCritical: 0,
-			GatewayConfig:  GatewayConfig{ListenerPort: 8888},
+			GatewayConfig:  GatewayConfig{Addresses: []string{fmt.Sprintf("%s:8888", dbDNS)}},
 			EnterpriseMeta: *structs.DefaultEnterpriseMeta(),
 		},
+	}
+
+	// internal accounting that users don't see can be blown away
+	for _, sum := range dump {
+		sum.GatewayConfig.addressesSet = nil
 	}
 	assert.ElementsMatch(t, expect, dump)
 }

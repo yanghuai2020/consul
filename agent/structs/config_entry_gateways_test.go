@@ -562,3 +562,52 @@ func TestTerminatingConfigEntry_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestGatewayService_Addresses(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    GatewayService
+		argument string
+		expected []string
+	}{
+		{
+			name:     "port is zero",
+			input:    GatewayService{},
+			expected: nil,
+		},
+		{
+			name: "no hosts",
+			input: GatewayService{
+				Port: 8080,
+			},
+			expected: []string{":8080"},
+		},
+		{
+			name: "no hosts with default",
+			input: GatewayService{
+				Port: 8080,
+			},
+			argument: "service.ingress.dc.domain",
+			expected: []string{"service.ingress.dc.domain:8080"},
+		},
+		{
+			name: "user-defined hosts",
+			input: GatewayService{
+				Port:  8080,
+				Hosts: []string{"*.test.example.com", "other.example.com"},
+			},
+			argument: "service.ingress.dc.domain",
+			expected: []string{"*.test.example.com:8080", "other.example.com:8080"},
+		},
+	}
+
+	for _, test := range cases {
+		// We explicitly copy the variable for the range statement so that can run
+		// tests in parallel.
+		tc := test
+		t.Run(tc.name, func(t *testing.T) {
+			addresses := tc.input.Addresses(tc.argument)
+			require.ElementsMatch(t, tc.expected, addresses)
+		})
+	}
+}
