@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/consul/logging"
 	"time"
+
+	"github.com/hashicorp/consul/logging"
 
 	envoy "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoyauth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
@@ -321,9 +322,7 @@ func (s *Server) makeAppCluster(cfgSnap *proxycfg.ConfigSnapshot, name, pathProt
 			Endpoints: []envoyendpoint.LocalityLbEndpoints{
 				{
 					LbEndpoints: []envoyendpoint.LbEndpoint{
-						makeEndpoint(name,
-							addr,
-							port),
+						makeEndpoint(addr, port),
 					},
 				},
 			},

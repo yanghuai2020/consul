@@ -3,6 +3,7 @@ package xds
 import (
 	"errors"
 	"fmt"
+
 	envoy "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoyendpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
@@ -289,7 +290,7 @@ func (s *Server) endpointsFromSnapshotIngressGateway(cfgSnap *proxycfg.ConfigSna
 	return resources, nil
 }
 
-func makeEndpoint(clusterName, host string, port int) envoyendpoint.LbEndpoint {
+func makeEndpoint(host string, port int) envoyendpoint.LbEndpoint {
 	return envoyendpoint.LbEndpoint{
 		HostIdentifier: &envoyendpoint.LbEndpoint_Endpoint{
 			Endpoint: &envoyendpoint.Endpoint{
