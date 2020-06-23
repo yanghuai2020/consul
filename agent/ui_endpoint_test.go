@@ -535,7 +535,7 @@ func TestUIGatewayServiceNodes_Terminating(t *testing.T) {
 func TestUIGatewayServiceNodes_Ingress(t *testing.T) {
 	t.Parallel()
 
-	a := NewTestAgent(t, "")
+	a := NewTestAgent(t, `alt_domain = "alt.consul."`)
 	defer a.Shutdown()
 
 	// Register ingress gateway and a service that will be associated with it
@@ -659,14 +659,20 @@ func TestUIGatewayServiceNodes_Ingress(t *testing.T) {
 
 	// Construct expected addresses so that differences between OSS/Ent are handled by code
 	webDNS := serviceIngressDNSName("web", "dc1", "consul.", structs.DefaultEnterpriseMeta())
+	webDNSAlt := serviceIngressDNSName("web", "dc1", "alt.consul.", structs.DefaultEnterpriseMeta())
 	dbDNS := serviceIngressDNSName("db", "dc1", "consul.", structs.DefaultEnterpriseMeta())
+	dbDNSAlt := serviceIngressDNSName("db", "dc1", "alt.consul.", structs.DefaultEnterpriseMeta())
 
 	dump := obj.([]*ServiceSummary)
 	expect := []*ServiceSummary{
 		{
 			Name: "web",
 			GatewayConfig: GatewayConfig{
-				Addresses: []string{fmt.Sprintf("%s:8080", webDNS), "*.test.example.com:8081"},
+				Addresses: []string{
+					fmt.Sprintf("%s:8080", webDNS),
+					fmt.Sprintf("%s:8080", webDNSAlt),
+					"*.test.example.com:8081",
+				},
 			},
 			EnterpriseMeta: *structs.DefaultEnterpriseMeta(),
 		},
@@ -678,7 +684,12 @@ func TestUIGatewayServiceNodes_Ingress(t *testing.T) {
 			ChecksPassing:  1,
 			ChecksWarning:  1,
 			ChecksCritical: 0,
-			GatewayConfig:  GatewayConfig{Addresses: []string{fmt.Sprintf("%s:8888", dbDNS)}},
+			GatewayConfig: GatewayConfig{
+				Addresses: []string{
+					fmt.Sprintf("%s:8888", dbDNS),
+					fmt.Sprintf("%s:8888", dbDNSAlt),
+				},
+			},
 			EnterpriseMeta: *structs.DefaultEnterpriseMeta(),
 		},
 	}

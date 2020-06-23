@@ -558,7 +558,7 @@ func TestGatewayService_Addresses(t *testing.T) {
 	cases := []struct {
 		name     string
 		input    GatewayService
-		argument string
+		argument []string
 		expected []string
 	}{
 		{
@@ -567,19 +567,25 @@ func TestGatewayService_Addresses(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "no hosts",
+			name: "no hosts with empty array",
 			input: GatewayService{
 				Port: 8080,
 			},
-			expected: []string{":8080"},
+			expected: nil,
 		},
 		{
 			name: "no hosts with default",
 			input: GatewayService{
 				Port: 8080,
 			},
-			argument: "service.ingress.dc.domain",
-			expected: []string{"service.ingress.dc.domain:8080"},
+			argument: []string{
+				"service.ingress.dc.domain",
+				"service.ingress.dc.alt.domain",
+			},
+			expected: []string{
+				"service.ingress.dc.domain:8080",
+				"service.ingress.dc.alt.domain:8080",
+			},
 		},
 		{
 			name: "user-defined hosts",
@@ -587,7 +593,10 @@ func TestGatewayService_Addresses(t *testing.T) {
 				Port:  8080,
 				Hosts: []string{"*.test.example.com", "other.example.com"},
 			},
-			argument: "service.ingress.dc.domain",
+			argument: []string{
+				"service.ingress.dc.domain",
+				"service.ingress.alt.domain",
+			},
 			expected: []string{"*.test.example.com:8080", "other.example.com:8080"},
 		},
 	}

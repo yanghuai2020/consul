@@ -226,25 +226,7 @@ func summarizeServices(dump structs.ServiceDump, cfg *config.RuntimeConfig) []*S
 		if csn.GatewayService != nil {
 			gwsvc := csn.GatewayService
 			sum := getService(gwsvc.Service.ToServiceID())
-			ingressDNS := serviceIngressDNSName(
-				gwsvc.Service.Name,
-				cfg.Datacenter,
-				cfg.DNSDomain,
-				&gwsvc.Service.EnterpriseMeta,
-			)
-			for _, addr := range gwsvc.Addresses(ingressDNS) {
-				// check for duplicates, a service will have a ServiceInfo struct for
-				// every instance that is registered.
-				if _, ok := sum.GatewayConfig.addressesSet[addr]; !ok {
-					if sum.GatewayConfig.addressesSet == nil {
-						sum.GatewayConfig.addressesSet = make(map[string]struct{})
-					}
-					sum.GatewayConfig.addressesSet[addr] = struct{}{}
-					sum.GatewayConfig.Addresses = append(
-						sum.GatewayConfig.Addresses, addr,
-					)
-				}
-			}
+			modifySummaryForGatewayService(cfg, sum, gwsvc)
 		}
 
 		// Will happen in cases where we only have the GatewayServices mapping
@@ -321,4 +303,39 @@ func summarizeServices(dump structs.ServiceDump, cfg *config.RuntimeConfig) []*S
 		output[idx] = sum
 	}
 	return output
+}
+
+func modifySummaryForGatewayService(
+	cfg *config.RuntimeConfig,
+	sum *ServiceSummary,
+	gwsvc *structs.GatewayService,
+) {
+	var dnsAddresses []string
+	for _, domain := range []string{cfg.DNSDomain, cfg.DNSAltDomain} {
+		// If the domain is empty, do not use it to construct a valid DNS
+		// address
+		if domain == "" {
+			continue
+		}
+		dnsAddresses = append(dnsAddresses, serviceIngressDNSName(
+			gwsvc.Service.Name,
+			cfg.Datacenter,
+			domain,
+			&gwsvc.Service.EnterpriseMeta,
+		))
+	}
+
+	for _, addr := range gwsvc.Addresses(dnsAddresses) {
+		// check for duplicates, a service will have a ServiceInfo struct for
+		// every instance that is registered.
+		if _, ok := sum.GatewayConfig.addressesSet[addr]; !ok {
+			if sum.GatewayConfig.addressesSet == nil {
+				sum.GatewayConfig.addressesSet = make(map[string]struct{})
+			}
+			sum.GatewayConfig.addressesSet[addr] = struct{}{}
+			sum.GatewayConfig.Addresses = append(
+				sum.GatewayConfig.Addresses, addr,
+			)
+		}
+	}
 }
